@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kalkulator RRSO</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f5f3;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.25);
+    --text: #1a1a18;
+    --text-muted: #6b6b67;
+    --accent: #185FA5;
+    --accent-bg: #E6F1FB;
+    --warning-bg: #FAEEDA;
+    --warning-text: #854F0B;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e1c;
+      --bg-secondary: #2a2a28;
+      --border: rgba(255,255,255,0.12);
+      --border-md: rgba(255,255,255,0.25);
+      --text: #f0ede8;
+      --text-muted: #999993;
+      --accent: #85B7EB;
+      --accent-bg: #042C53;
+      --warning-bg: #412402;
+      --warning-text: #FAC775;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.25rem; }
+  @media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  label.field > span {
+    font-size: 13px;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 8px 10px;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="number"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,95,165,0.12); }
+
+  .checks { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .checks label {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; cursor: pointer;
+  }
+  input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .karencja-box {
+    display: none;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 1.25rem;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .karencja-box.visible { display: flex; }
+  .karencja-box input { width: 80px; }
+  .karencja-box span { font-size: 12px; color: var(--text-muted); }
+
+  .tranches-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .tranches-header span { font-size: 13px; font-weight: 500; }
+
+  #tranches { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+
+  .tranche-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+  .tranche-row .label { font-size: 12px; color: var(--text-muted); min-width: 70px; }
+  .tranche-row input { width: 120px; }
+  .tranche-row .mid { font-size: 12px; color: var(--text-muted); }
+  .tranche-row .mo { width: 60px; }
+  .tranche-row button { margin-left: auto; }
+
+  button {
+    padding: 6px 14px;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  button:hover { background: var(--bg-secondary); }
+  button:active { transform: scale(0.98); }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 540px) { .metrics { grid-template-columns: 1fr 1fr; } }
+
+  .metric {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    text-align: center;
+  }
+  .metric .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .metric .value { font-size: 21px; font-weight: 500; }
+
+  .table-wrap {
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .table-head {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 1fr 1fr 1fr 1fr;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-bottom: 0.5px solid var(--border);
+    background: var(--bg-secondary);
+  }
+  #tabela { max-height: 320px; overflow-y: auto; font-size: 13px; }
+
+  .row {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 1fr 1fr 1fr 1fr;
+    padding: 6px 12px;
+  }
+  .row.even { background: var(--bg-secondary); }
+
+  .badge-kar {
+    display: inline-block;
+    font-size: 11px;
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .badge-spl { font-size: 11px; color: var(--text-muted); }
+
+  .note { font-size: 12px; padding: 8px 12px; color: var(--text-muted); }
+
+  .footer { margin-top: 1rem; font-size: 12px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Kalkulator RRSO</h1>
+
+  <div class="grid-2">
+    <label class="field">
+      <span>Okres (miesiące)</span>
+      <input type="number" id="okres" value="36" min="1" max="360" oninput="calc()" />
+    </label>
+    <label class="field">
+      <span>Nominalne oprocentowanie (%)</span>
+      <input type="number" id="stopa" value="8.5" min="0" step="0.1" oninput="calc()" />
+    </label>
+    <label class="field">
+      <span>Prowizja (zł)</span>
+      <input type="number" id="prowizja" value="500" min="0" step="50" oninput="calc()" />
+    </label>
+    <label class="field">
+      <span>Ubezpieczenie miesięczne (zł)</span>
+      <input type="number" id="ubezp" value="0" min="0" step="10" oninput="calc()" />
+    </label>
+    <label class="field">
+      <span>Inne opłaty jednorazowe (zł)</span>
+      <input type="number" id="inne" value="0" min="0" step="50" oninput="calc()" />
+    </label>
+  </div>
+
+  <div class="checks">
+    <label>
+      <input type="checkbox" id="cb360" onchange="calc()" />
+      Metoda 30/360
+    </label>
+    <label>
+      <input type="checkbox" id="cbKarencja" onchange="toggleKarencja()" />
+      Karencja w spłacie kapitału
+    </label>
+  </div>
+
+  <div class="karencja-box" id="karencjaBox">
+    <label class="field" style="display:flex;align-items:center;gap:10px;margin:0;">
+      <span style="white-space:nowrap;font-size:13px;color:var(--text-muted);">Miesięcy karencji</span>
+      <input type="number" id="karencja" value="3" min="1" max="60" oninput="calc()" style="width:80px;" />
+    </label>
+    <span>W tym okresie płacisz tylko odsetki.</span>
+  </div>
+
+  <div class="tranches-header">
+    <span>Transze kredytu</span>
+    <button onclick="addTranche()">+ Dodaj transzę</button>
+  </div>
+  <div id="tranches"></div>
+
+  <div class="metrics">
+    <div class="metric"><div class="label">RRSO</div><div class="value" id="rrso-out">—</div></div>
+    <div class="metric"><div class="label">Rata (po karencji)</div><div class="value" id="rata-out">—</div></div>
+    <div class="metric"><div class="label">Całkowity koszt</div><div class="value" id="koszt-out">—</div></div>
+    <div class="metric"><div class="label">Łączna kwota</div><div class="value" id="kwota-out">—</div></div>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-head">
+      <span>Nr</span><span>Typ</span><span>Rata</span><span>Odsetki</span><span>Kapitał</span><span>Saldo</span>
+    </div>
+    <div id="tabela"></div>
+  </div>
+
+  <div class="footer">Kalkulator poglądowy. Rzeczywiste warunki mogą się różnić.</div>
+</div>
+
+<script>
+let trancheCnt = 0;
+const trancheData = [];
+
+function fmt(n) {
+  return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+}
+
+function addTranche(kwota, miesiac) {
+  const id = trancheCnt++;
+  trancheData.push({ id, kwota: kwota || 10000, miesiac: miesiac || 1 });
+  renderTranches();
+  calc();
+}
+
+function removeTranche(id) {
+  const idx = trancheData.findIndex(t => t.id === id);
+  if (idx > -1) trancheData.splice(idx, 1);
+  renderTranches();
+  calc();
+}
+
+function renderTranches() {
+  const box = document.getElementById('tranches');
+  box.innerHTML = trancheData.map((t, i) => `
+    <div class="tranche-row">
+      <span class="label">Transza ${i + 1}</span>
+      <input type="number" value="${t.kwota}" min="0" step="1000"
+        oninput="trancheData[${i}].kwota=parseFloat(this.value)||0;calc()"
+        placeholder="Kwota (zł)" />
+      <span class="mid">wypłata w miesiącu</span>
+      <input type="number" class="mo" value="${t.miesiac}" min="0" max="360" step="1"
+        oninput="trancheData[${i}].miesiac=parseInt(this.value)||0;calc()" />
+      ${trancheData.length > 1
+        ? `<button onclick="removeTranche(${t.id})">usuń</button>`
+        : ''}
+    </div>
+  `).join('');
+}
+
+function toggleKarencja() {
+  const box = document.getElementById('karencjaBox');
+  if (document.getElementById('cbKarencja').checked) {
+    box.classList.add('visible');
+  } else {
+    box.classList.remove('visible');
+  }
+  calc();
+}
+
+function getRm() {
+  const nom = parseFloat(document.getElementById('stopa').value) || 0;
+  const is360 = document.getElementById('cb360').checked;
+  // 30/360: prosta stopa miesięczna = nom/12
+  // actual/365: ekwiwalent miesięczny ze stopy rocznej
+  return is360
+    ? nom / 100 / 12
+    : Math.pow(1 + nom / 100, 1 / 12) - 1;
+}
+
+function calcAmort(P, rm, n) {
+  if (rm === 0 || n <= 0) return n > 0 ? P / n : 0;
+  return P * rm * Math.pow(1 + rm, n) / (Math.pow(1 + rm, n) - 1);
+}
+
+function calcRRSO(netP, cashflows) {
+  if (netP <= 0 || cashflows.length === 0) return 0;
+  let lo = 0.000001, hi = 100, mid;
+  for (let i = 0; i < 120; i++) {
+    mid = (lo + hi) / 2;
+    const rm = mid / 12;
+    let pv = 0;
+    for (let t = 0; t < cashflows.length; t++) {
+      pv += cashflows[t] / Math.pow(1 + rm, t + 1);
+    }
+    if (pv > netP) lo = mid; else hi = mid;
+  }
+  return mid;
+}
+
+function calc() {
+  if (trancheData.length === 0) return;
+
+  const n = parseInt(document.getElementById('okres').value) || 1;
+  const prowizja = parseFloat(document.getElementById('prowizja').value) || 0;
+  const inne = parseFloat(document.getElementById('inne').value) || 0;
+  const ubezp = parseFloat(document.getElementById('ubezp').value) || 0;
+  const rm = getRm();
+  const karencjaOn = document.getElementById('cbKarencja').checked;
+  const karMies = karencjaOn ? (parseInt(document.getElementById('karencja').value) || 0) : 0;
+
+  const totalKwota = trancheData.reduce((s, t) => s + t.kwota, 0);
+  const totalMies = n + karMies;
+
+  const harmonogram = [];
+  let saldo = 0;
+
+  for (let t = 1; t <= totalMies; t++) {
+    // dodaj transze wypłacane w tym miesiącu
+    trancheData.forEach(tr => {
+      if (tr.miesiac === t) saldo += tr.kwota;
+    });
+
+    const odsetki = saldo * rm;
+    let kapital = 0;
+    let typ = '';
+
+    if (t <= karMies) {
+      kapital = 0;
+      typ = 'karencja';
+    } else {
+      const pozostaleRaty = n - (t - karMies - 1);
+      const rata_pelna = calcAmort(saldo, rm, pozostaleRaty);
+      kapital = rata_pelna - odsetki;
+      typ = 'spłata';
+    }
+
+    saldo = Math.max(0, saldo - kapital);
+    const rata = kapital + odsetki + ubezp;
+    harmonogram.push({ t, typ, rata, odsetki, kapital, saldo });
+  }
+
+  const cashflows = harmonogram.map(r => r.rata);
+  const netP = totalKwota - prowizja - inne;
+  const rrso = calcRRSO(netP > 0 ? netP : totalKwota, cashflows);
+
+  const totalPaid = harmonogram.reduce((s, r) => s + r.rata, 0) + prowizja + inne;
+  const regularRata = harmonogram.find(r => r.typ === 'spłata');
+
+  document.getElementById('rrso-out').textContent = (rrso * 100).toFixed(2) + '%';
+  document.getElementById('rata-out').textContent = regularRata ? fmt(regularRata.rata) : '—';
+  document.getElementById('koszt-out').textContent = fmt(totalPaid);
+  document.getElementById('kwota-out').textContent = fmt(totalKwota);
+
+  const maxShow = 72;
+  let rows = '';
+  const show = Math.min(harmonogram.length, maxShow);
+  for (let i = 0; i < show; i++) {
+    const r = harmonogram[i];
+    const typLabel = r.typ === 'karencja'
+      ? `<span class="badge-kar">karencja</span>`
+      : `<span class="badge-spl">spłata</span>`;
+    rows += `<div class="row ${i % 2 === 0 ? '' : 'even'}">
+      <span style="color:var(--text-muted)">${r.t}</span>
+      <span>${typLabel}</span>
+      <span>${fmt(r.rata)}</span>
+      <span>${fmt(r.odsetki)}</span>
+      <span>${fmt(r.kapital)}</span>
+      <span>${fmt(r.saldo)}</span>
+    </div>`;
+  }
+  if (harmonogram.length > maxShow) {
+    rows += `<div class="note">… pokazano ${maxShow} z ${harmonogram.length} rat</div>`;
+  }
+  document.getElementById('tabela').innerHTML = rows;
+}
+
+// start z jedną transzą
+addTranche(20000, 1);
+</script>
+</body>
+</html>
